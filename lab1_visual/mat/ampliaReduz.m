@@ -1,17 +1,14 @@
 clear all;
 close all;
 clc;
-fign=1;
-
 
 % original
 espiraOrig = imzoneplate;
 [rows, columns, numberOfColorChannels] = size(espiraOrig);
-% figure(fign);imshow(espiraOrig)
-fign=fign+1;
+
 
 %%  IMRESIZE
-method=["nearest" "bilinear" "bicubic" "box" "lanczos2" "lanczos3"];
+method=["none" "nearest" "bilinear" "bicubic" "lanczos3"];
 method_len = length(method);
 %{ 
 'nearest' ~ Nearest-neighbor interpolation
@@ -29,38 +26,96 @@ method_len = length(method);
 'lanczos3'	Lanczos-3 kernel
 %}
 
-refator = 0.5;
+
+% figure2 range of pixels controls
+RF = 0.5;     %resize factor
+Xor=1;    %original start pixel
+Yor=500;    %original finish pixel
+Xre=Xor*RF; %resized start pixel
+Yre=Yor*RF; %resized finish pixel
+
 
 % allocate resized pictures
-espiraRe_len = round(refator * rows );
+espiraRe_len = round(RF * rows);
 espiraResize = zeros( espiraRe_len , espiraRe_len , method_len ); 
 
+
 % gaussian filter of original
-espiraOrig2 = imgaussfilt(espiraOrig,0.5); %def standard deviation 0.5
-f1=figure(fign);imshowpair(espiraOrig,espiraOrig2,'montage');fign=fign+1;
-set(f1,'Name','original--gaussianFiltered');
+espiraOrigFilt = imgaussfilt(espiraOrig,0.5); %def standard deviation 0.5
+f1=figure(1);imshowpair(espiraOrig(200:400,200:400),espiraOrigFilt(200:400,200:400),'montage');
+% f1=figure(1);imshowpair(espiraOrig,espiraOrigFilt,'montage');
+title('original--gaussianFiltered');set(f1,'Name','original--gaussianFiltered');
+
+%espiraOrig = espiraOrigFilt;
+
+f2=figure(2);f3=figure(3);f4=figure(4);f5=figure(5);
 
 % resize
 for i=1:1:method_len
     
-    espiraResize(:,:,i) = imresize(espiraOrig,refator,method(i));
- 
-    f2=figure(fign);imshowpair(espiraOrig,espiraResize(:,:,i),'montage');
-    set(f2,'Name',method(i));fign=fign+1;
+    %cut resized by controls
+    figure(2);
+    subplot(2,3,i);
+    if i == 1
+        imshow(espiraOrig(Xor:Yor,Xor:Yor));title(method(i));
+    else
+        espiraResize(:,:,i) = imresize(espiraOrig, RF , method(i));
+        imshow(espiraResize(Xre:Yre,Xre:Yre,i));title(method(i))
+        %imshow(espiraResize(100:115,100:115,i));title(method(i))
+    end
     
-    % densidade espectral + variação do sinal no espaço
-    figure(method_len+3);subplot(3,2,i);
-    imagesc( log10(abs(fftshift(fft2(espiraOrig))).^2 ));
-    title(method(i))
+    
+    %full resized pics
+    figure(3);
+    if i ~= 1
+        imshowpair(espiraOrig,espiraResize(:,:,i),'montage');title(method(i))
+    end
+
+    
+    % densidade espectral
+    figure(4);
+    subplot(2,3,i);
+    if i == 1 
+        imagesc( log10(abs(fftshift(fft2(espiraOrig(Xor:Yor,Xor:Yor)))).^2 ));
+        title('densidade espetral original');
+    else
+        imagesc( log10(abs(fftshift(fft2(espiraResize(Xre:Yre,Xre:Yre,i)))).^2 ));
+        title(method(i))
+    end
+   
+    
+    %variação do sinal no espaço
+    figure(5);
+    subplot(2,3,i);
+    if i == 1
+        histogram(espiraOrig(Xor:Yor,Xor:Yor),20);title('pdf original');
+    else
+        histogram(espiraResize(Xre:Yre,Xre:Yre,i),20);title(method(i))
+    end
     
 end
-fign=fign+1;
+set(f2,'Name','resized interpolated img');
+set(f4,'Name','densidade espetral');
+set(f5,'Name','variação do sinal no espaço');
+
+
+% diff entre methods interpolação 
+% for i=1:1:method_len-3
+%     
+%         f5=figure(fign);
+%         subplot(2,3,i);
+%         dif = log10(abs(fftshift(fft2(espiraResize(:,:,3)))).^2 ) - log10(abs(fftshift(fft2(espiraResize(:,:,i)))).^2 );
+%         imagesc(dif);
+%         t = strcat('diff dens espetral (bicubic-',method(i),')');title(t);
+%     
+% end
+% fign=fign+1;
 
 %%  RESAMPLE
 % espiraResample = zeros( espiraRe_len , espiraRe_len ); %#ok<PREALL>
 % espiraResample = resample(espiraOrig,1,1/refator);
-% f3=figure(fign);imshowpair(espiraOrig,espiraResample,'montage');
-% set(f3,'Name','original--resample');fign=fign+1;
+% f6=figure(fign);imshowpair(espiraOrig,espiraResample,'montage');
+% set(f6,'Name','original--resample');fign=fign+1;
 
 
 
